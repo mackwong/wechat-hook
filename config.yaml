@@ -1,0 +1,6 @@
+- wechat: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=609a7fae-cba3-4eae-afe4-7159e3fcfada
+  gitlab:
+    repo: redis
+    event: push
+  type: text
+  content: "hello"
