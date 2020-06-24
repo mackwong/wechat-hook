@@ -1,9 +1,9 @@
 package manager
 
 import (
-	"encoding/json"
 	"github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -12,12 +12,29 @@ import (
 const MaxMessages = 100
 
 type Manager struct {
-	s *http.Server
-	c chan interface{}
+	s     *http.Server
+	c     chan interface{}
+	rules []Rule
 }
 
-func NewManager() *Manager {
-	mgr := &Manager{}
+func NewManager(configFile string) (*Manager, error) {
+	conf, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		return nil, err
+	}
+
+	logrus.Infof("loading config:\n%s\n", conf)
+	rules := make([]Rule, 0)
+	err = yaml.Unmarshal(conf, &rules)
+	if err != nil {
+		return nil, err
+	}
+
+	mgr := &Manager{
+		c:     make(chan interface{}, MaxMessages),
+		rules: rules,
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/gitlab", mgr.gitlabHandler)
 	mgr.s = &http.Server{
@@ -25,8 +42,7 @@ func NewManager() *Manager {
 		WriteTimeout: time.Second * 5,
 		Handler:      mux,
 	}
-	mgr.c = make(chan interface{}, MaxMessages)
-	return mgr
+	return mgr, nil
 }
 
 func (m *Manager) Run() error {
