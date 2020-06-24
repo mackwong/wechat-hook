@@ -1,0 +1,1 @@
+# gitllab-wechat-hook
