@@ -1,6 +1,9 @@
 package manager
 
 import (
+	"encoding/json"
+	"fmt"
+	"github.com/mackwong/gitllab-wechat-hook/pkg/wechat"
 	"github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
 	"gopkg.in/yaml.v2"
@@ -11,9 +14,15 @@ import (
 
 const MaxMessages = 100
 
+type EventInfo struct {
+	ProjectName string `json:"project_name"`
+	EventType   gitlab.EventType
+	Event       interface{} `json:"event"`
+}
+
 type Manager struct {
 	s     *http.Server
-	c     chan interface{}
+	c     chan EventInfo
 	rules []Rule
 }
 
@@ -23,7 +32,6 @@ func NewManager(configFile string) (*Manager, error) {
 		return nil, err
 	}
 
-	logrus.Infof("loading config:\n%s\n", conf)
 	rules := make([]Rule, 0)
 	err = yaml.Unmarshal(conf, &rules)
 	if err != nil {
@@ -31,7 +39,7 @@ func NewManager(configFile string) (*Manager, error) {
 	}
 
 	mgr := &Manager{
-		c:     make(chan interface{}, MaxMessages),
+		c:     make(chan EventInfo, MaxMessages),
 		rules: rules,
 	}
 
@@ -46,23 +54,51 @@ func NewManager(configFile string) (*Manager, error) {
 }
 
 func (m *Manager) Run() error {
+	go m.ProcessMessage()
 	return m.s.ListenAndServe()
 }
 
 func (m *Manager) ProcessMessage() {
-	go func() {
-		for {
-			event := <-m.c
-			switch event.(type) {
-			case gitlab.PushEvent:
-				m.push()
+	for {
+		event := <-m.c
+		for _, r := range m.rules {
+			for _, c := range r.Config {
+				if c.EventType == event.EventType {
+					if event.EventType == gitlab.EventTypePipeline {
+						status := event.Event.(*gitlab.PipelineEvent).ObjectAttributes.Status
+						if status == "successs" {
+							continue
+						}
+					}
+					msg := wechat.Message{
+						WeChat: r.WeChatHook,
+						Message: wechat.WechatMessage{
+							MsgType: c.Type,
+						},
+						Data: event.Event,
+					}
+					if c.Type == Markdown {
+						msg.Message = wechat.WechatMessage{
+							MsgType:  c.Type,
+							Markdown: &wechat.WeChatMarkdown{Content: c.Content},
+						}
+					} else {
+						msg.Message = wechat.WechatMessage{
+							MsgType: c.Type,
+							Text:    &wechat.WeChatText{Content: c.Content, MentionedList: c.MentionedList},
+						}
+					}
+					if err := msg.Send(); err != nil {
+						logrus.Errorf("Send message error: %s", err.Error())
+					}
+				}
 			}
 		}
-	}()
+	}
 }
 
-func (m *Manager) push() {
-
+func (m *Manager) push(name string) {
+	logrus.Info(name)
 }
 
 func (m *Manager) gitlabHandler(w http.ResponseWriter, r *http.Request) {
@@ -83,6 +119,14 @@ func (m *Manager) gitlabHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m.c <- event
+	o, _ := json.MarshalIndent(event, "", "  ")
+	fmt.Printf("%s", o)
+
+	info := EventInfo{
+		Event:     event,
+		EventType: eventType,
+	}
+
+	m.c <- info
 	w.WriteHeader(http.StatusOK)
 }

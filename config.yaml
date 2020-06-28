@@ -1,9 +1,17 @@
 - wechat_hook: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=609a7fae-cba3-4eae-afe4-7159e3fcfada
-  repo: redis
   config:
-  - event: push
-    type: text
-    content: "hello"
-  - event: default
-    type: text
-    content: "hello"
+  - event: Issue Hook
+    type: markdown
+    content: |
+      @{{.User.Username}} 创建了一个 Issue， 并分配给了 {{range .Assignees}} @{{.Name}} {{end}} ！[详细信息]({{.Project.WebURL}}/issues/{{.ObjectAttributes.IID}})
+      > <font color="comment">标题</font>: {{.ObjectAttributes.Title}}
+      > <font color="comment">内容</font>: {{.ObjectAttributes.Description}}
+      > <font color="comment">状态</font>: <font color="info">{{.ObjectAttributes.State}}</font>
+  - event: Pipeline Hook
+    type: markdown
+    content: |
+      Pipeline 构建失败!！[点我查看详细信息]({{.Project.WebURL}}/pipelines)
+      > <font color="comment">分支</font>:  {{.ObjectAttributes.Ref}}
+      > <font color="comment">耗时</font>:  {{.ObjectAttributes.Duration}} 秒
+      > <font color="comment">状态</font>: <font color="warning">{{.ObjectAttributes.Status}}</font>
+
