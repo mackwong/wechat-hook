@@ -2,13 +2,20 @@ package wechat
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 	"text/template"
 )
+
+func init() {
+	http.DefaultClient.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+}
 
 type Message struct {
 	WeChat  string        `json:"wechat"`
@@ -63,13 +70,6 @@ func (m *Message) Send() (err error) {
 		return err
 	}
 
-	fmt.Printf("%s", out)
-
-	resp, err := http.Post(m.WeChat, "application/json", bytes.NewBuffer(out))
-	if err != nil {
-		return err
-	}
-	respText, _ := ioutil.ReadAll(resp.Body)
-	fmt.Printf("%s", respText)
+	_, err = http.Post(m.WeChat, "application/json", bytes.NewBuffer(out))
 	return err
 }

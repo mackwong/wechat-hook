@@ -13,6 +13,7 @@ func NewCmdRun() *cobra.Command {
 		Short:             "Launch Wechat Hooker",
 		DisableAutoGenTag: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Infof("start to run hook server...")
 			m, err := manager.NewManager("config.yaml")
 			if err != nil {
 				logrus.Fatal(err.Error())
