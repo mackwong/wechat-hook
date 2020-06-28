@@ -66,10 +66,11 @@ func (m *Manager) ProcessMessage() {
 				if c.EventType == event.EventType {
 					if event.EventType == gitlab.EventTypePipeline {
 						status := event.Event.(*gitlab.PipelineEvent).ObjectAttributes.Status
-						if status == "successs" {
+						if status == "success" {
 							continue
 						}
 					}
+
 					msg := wechat.Message{
 						WeChat: r.WeChatHook,
 						Message: wechat.WechatMessage{

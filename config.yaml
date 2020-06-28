@@ -3,15 +3,19 @@
   - event: Issue Hook
     type: markdown
     content: |
-      @{{.User.Username}} 创建了一个 Issue， 并分配给了 {{range .Assignees}} @{{.Name}} {{end}} ！[详细信息]({{.Project.WebURL}}/issues/{{.ObjectAttributes.IID}})
+      @{{.User.Username}} 在{{.Project.Name}} 项目里更新了一个 Issue {{ if .Assignees }}并分配给了 {{range .Assignees}} @{{.Name}} ! {{end}}{{end}}
       > <font color="comment">标题</font>: {{.ObjectAttributes.Title}}
-      > <font color="comment">内容</font>: {{.ObjectAttributes.Description}}
+      > <font color="comment">内容</font>: {{ $length := len .ObjectAttributes.Description }} {{ if gt $length 50 }} {{slice .ObjectAttributes.Description 0 50}}...{{else}}{{.ObjectAttributes.Description}}{{end}}
       > <font color="comment">状态</font>: <font color="info">{{.ObjectAttributes.State}}</font>
+
+      [详细信息]({{.Project.WebURL}}/pipelines)
   - event: Pipeline Hook
     type: markdown
     content: |
-      Pipeline 构建失败!！[点我查看详细信息]({{.Project.WebURL}}/pipelines)
+      {{.Project.Name}} pipeline 构建失败!
       > <font color="comment">分支</font>:  {{.ObjectAttributes.Ref}}
       > <font color="comment">耗时</font>:  {{.ObjectAttributes.Duration}} 秒
       > <font color="comment">状态</font>: <font color="warning">{{.ObjectAttributes.Status}}</font>
+
+      [详细信息]({{.Project.WebURL}}/issues/{{.ObjectAttributes.IID}})
 
