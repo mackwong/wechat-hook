@@ -1,4 +1,4 @@
-- wechat_hook: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=609a7fae-cba3-4eae-afe4-7159e3fcfada
+- wechat_hook: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx
   config:
   - event: Issue Hook
     type: markdown
