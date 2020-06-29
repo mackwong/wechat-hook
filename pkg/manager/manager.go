@@ -64,13 +64,9 @@ func (m *Manager) ProcessMessage() {
 		for _, r := range m.rules {
 			for _, c := range r.Config {
 				if c.EventType == event.EventType {
-					if event.EventType == gitlab.EventTypePipeline {
-						status := event.Event.(*gitlab.PipelineEvent).ObjectAttributes.Status
-						if status != "failed" {
-							continue
-						}
+					if m.skip(&event) {
+						continue
 					}
-
 					msg := wechat.Message{
 						WeChat: r.WeChatHook,
 						Message: wechat.WechatMessage{
@@ -96,6 +92,22 @@ func (m *Manager) ProcessMessage() {
 			}
 		}
 	}
+}
+
+func (m *Manager) skip(event *EventInfo) bool {
+	if event.EventType == gitlab.EventTypePipeline {
+		status := event.Event.(*gitlab.PipelineEvent).ObjectAttributes.Status
+		return status != "failed"
+	}
+	if event.EventType == gitlab.EventTypeIssue {
+		e := event.Event.(*gitlab.IssueEvent)
+		for _, user := range e.Assignees {
+			if e.User.Username != user.Username {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func (m *Manager) push(name string) {
