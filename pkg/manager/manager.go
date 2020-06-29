@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mackwong/gitllab-wechat-hook/pkg/wechat"
+	"github.com/prometheus/alertmanager/template"
 	"github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
 	"gopkg.in/yaml.v2"
@@ -12,7 +13,10 @@ import (
 	"time"
 )
 
-const MaxMessages = 100
+const (
+	MaxMessages                        = 100
+	EventAlertManager gitlab.EventType = "AlertManager Hook"
+)
 
 type EventInfo struct {
 	ProjectName string `json:"project_name"`
@@ -45,6 +49,7 @@ func NewManager(configFile string) (*Manager, error) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/gitlab", mgr.gitlabHandler)
+	mux.HandleFunc("/alertmanager", mgr.alertManagerHandler)
 	mgr.s = &http.Server{
 		Addr:         "0.0.0.0:9999",
 		WriteTimeout: time.Second * 5,
@@ -106,12 +111,41 @@ func (m *Manager) skip(event *EventInfo) bool {
 				return false
 			}
 		}
+		return true
 	}
-	return true
+	return false
 }
 
-func (m *Manager) push(name string) {
-	logrus.Info(name)
+func (m *Manager) alertManagerHandler(w http.ResponseWriter, r *http.Request) {
+	payload, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		logrus.Error(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer func() {
+		_ = r.Body.Close()
+	}()
+
+	var data template.Data
+	err = json.Unmarshal(payload, &data)
+	if err != nil {
+		logrus.Error(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	o, _ := json.MarshalIndent(data, "", "  ")
+	fmt.Printf("%s", o)
+
+	info := EventInfo{
+		Event:     data,
+		EventType: EventAlertManager,
+	}
+
+	m.c <- info
+	w.WriteHeader(http.StatusOK)
+
 }
 
 func (m *Manager) gitlabHandler(w http.ResponseWriter, r *http.Request) {
