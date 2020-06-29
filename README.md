@@ -1,4 +1,6 @@
-# gitllab-wechat-hook
+# wechat-hook
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/mackwong/wechat-hook)](https://goreportcard.com/report/github.com/mackwong/wechat-hook)
 
 支持 Gitlab 与 Alertmanager 接入企业版微信
 

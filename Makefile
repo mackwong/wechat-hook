@@ -8,3 +8,6 @@ build:
 
 image: build
 	docker build . -t $(IMAGE):$(TAG)
+
+lint: ## Run all the linters
+	golangci-lint run --fast --deadline 3m --skip-dirs vendor  ./...
